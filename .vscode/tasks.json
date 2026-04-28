@@ -1,0 +1,122 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build",
+      "type": "shell",
+      "command": "npm run build",
+      "group": "build",
+      "problemMatcher": ["$tsc"],
+      "detail": "tsc 编译 + 复制静态资源到 dist/"
+    },
+    {
+      "label": "Dev (Watch)",
+      "type": "shell",
+      "command": "npm run dev",
+      "isBackground": true,
+      "group": "build",
+      "problemMatcher": ["$tsc-watch"],
+      "detail": "tsc --watch 增量编译"
+    },
+    {
+      "label": "Start Server",
+      "type": "shell",
+      "command": "npm run start",
+      "dependsOn": "Build",
+      "detail": "构建后启动 MCP 服务器"
+    },
+    {
+      "label": "Start Server (stdio)",
+      "type": "shell",
+      "command": "node dist/index.js stdio",
+      "dependsOn": "Build",
+      "detail": "以 stdio 模式启动 MCP 服务器"
+    },
+    {
+      "label": "Start Server (HTTP)",
+      "type": "shell",
+      "command": "node dist/index.js http",
+      "dependsOn": "Build",
+      "detail": "以 HTTP 模式启动 MCP 服务器",
+      "options": {
+        "env": {
+          "PORT": "3000"
+        }
+      }
+    },
+    {
+      "label": "Type Check",
+      "type": "shell",
+      "command": "npx tsc --noEmit",
+      "group": "test",
+      "problemMatcher": ["$tsc"],
+      "detail": "仅做类型检查，不生成产物"
+    },
+    {
+      "label": "Clean",
+      "type": "shell",
+      "command": "rm -rf dist",
+      "detail": "清理构建产物"
+    },
+    {
+      "label": "Clean Build",
+      "type": "shell",
+      "command": "rm -rf dist && npm run build",
+      "group": "build",
+      "problemMatcher": ["$tsc"],
+      "detail": "清理后重新构建"
+    },
+    {
+      "label": "Docker Build",
+      "type": "shell",
+      "command": "docker compose build",
+      "group": "build",
+      "detail": "在 Docker 内完成编译和镜像打包"
+    },
+    {
+      "label": "Docker Up",
+      "type": "shell",
+      "command": "docker compose up --build",
+      "group": "build",
+      "detail": "构建并启动 Docker 容器（前台）"
+    },
+    {
+      "label": "Docker Up (后台)",
+      "type": "shell",
+      "command": "docker compose up --build -d",
+      "group": "build",
+      "detail": "构建并启动 Docker 容器（后台运行）"
+    },
+    {
+      "label": "Docker Down",
+      "type": "shell",
+      "command": "docker compose down",
+      "detail": "停止并移除 Docker 容器"
+    },
+    {
+      "label": "Docker Logs",
+      "type": "shell",
+      "command": "docker compose logs -f",
+      "detail": "查看容器实时日志"
+    },
+    {
+      "label": "Plugin List",
+      "type": "shell",
+      "command": "npm run plugin:list",
+      "detail": "列出已安装的插件"
+    },
+    {
+      "label": "Plugin Add",
+      "type": "shell",
+      "command": "node dist/cli.js add ${input:pluginPath}",
+      "detail": "添加插件（输入插件路径）"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "pluginPath",
+      "type": "promptString",
+      "description": "输入插件路径或 npm 包名"
+    }
+  ]
+}

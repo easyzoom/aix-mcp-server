@@ -1,0 +1,32 @@
+{
+  "defaultProvider": "openai",
+  "providers": [
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "type": "openai",
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKey": "",
+      "model": "gpt-4o-mini",
+      "enabled": false
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "type": "anthropic",
+      "baseUrl": "https://api.anthropic.com/v1",
+      "apiKey": "",
+      "model": "claude-sonnet-4-20250514",
+      "enabled": false
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama (Local)",
+      "type": "ollama",
+      "baseUrl": "http://localhost:11434",
+      "apiKey": "",
+      "model": "qwen2.5",
+      "enabled": false
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "name": "aix-mcp-server",
+  "version": "1.0.0",
+  "description": "My custom MCP server with tools and resources",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "aix-mcp-server": "dist/index.js",
+    "mcp-plugins": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc && cp -r src/web/*.html dist/web/ 2>/dev/null || mkdir -p dist/web && cp src/web/*.html dist/web/",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "plugins": "node dist/cli.js",
+    "plugin:add": "node dist/cli.js add",
+    "plugin:remove": "node dist/cli.js remove",
+    "plugin:list": "node dist/cli.js list"
+  },
+  "dependencies": {
+    "@cfworker/json-schema": "^4.1.1",
+    "@modelcontextprotocol/express": "^2.0.0-alpha.2",
+    "@modelcontextprotocol/node": "^2.0.0-alpha.2",
+    "@modelcontextprotocol/server": "^2.0.0-alpha.2",
+    "@types/node": "^25.6.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "typescript": "^6.0.3",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6"
+  }
+}

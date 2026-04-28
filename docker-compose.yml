@@ -1,0 +1,9 @@
+services:
+  aix-mcp-server:
+    build: .
+    container_name: aix-mcp-server
+    ports:
+      - "${HOST_PORT:-3080}:3000"
+    environment:
+      - PORT=3000
+    restart: unless-stopped
