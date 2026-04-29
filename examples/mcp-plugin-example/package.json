@@ -1,0 +1,15 @@
+{
+  "name": "mcp-plugin-example",
+  "version": "1.0.0",
+  "description": "Example MCP plugin — template for creating your own",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": ["mcp", "mcp-plugin", "model-context-protocol"],
+  "peerDependencies": {
+    "@modelcontextprotocol/server": ">=2.0.0-alpha.1",
+    "zod": ">=4.0.0"
+  }
+}

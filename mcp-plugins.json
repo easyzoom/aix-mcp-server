@@ -1,0 +1,29 @@
+{
+  "$schema": "./mcp-plugins.schema.json",
+  "plugins": [
+    {
+      "source": "./plugins/calculator",
+      "enabled": true
+    },
+    {
+      "source": "./plugins/crypto",
+      "enabled": true
+    },
+    {
+      "source": "./plugins/datetime",
+      "enabled": true
+    },
+    {
+      "source": "./plugins/filesystem",
+      "enabled": true
+    },
+    {
+      "source": "./plugins/system",
+      "enabled": true
+    },
+    {
+      "source": "./plugins/text-utils",
+      "enabled": true
+    }
+  ]
+}
