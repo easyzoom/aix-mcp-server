@@ -5,5 +5,5 @@ services:
     ports:
       - "${HOST_PORT:-3080}:3000"
     environment:
-      - PORT=3000
+      - MCP_PORT=3000
     restart: unless-stopped

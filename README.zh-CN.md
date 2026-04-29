@@ -218,6 +218,8 @@ npm run registry:validate
 
 贡献者可以阅读 [架构说明](./docs/architecture.md) 和 [Registry 字段规范](./docs/registry-schema.md) 了解模块边界与服务目录格式。
 
+Cursor 配置方式见 [Cursor 集成指引](./docs/cursor-integration.md)，包含项目级配置、全局配置和功能验证方法。
+
 后续版本规划见 [技术路线规划](./docs/roadmap.md)，覆盖 v1.1、v1.2 和 v2.0 的演进方向。
 
 ## 故障排查

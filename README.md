@@ -218,6 +218,8 @@ npm run registry:validate
 
 See [Architecture Notes](./docs/architecture.md) and [Registry Schema](./docs/registry-schema.md) for contributor-facing design details.
 
+See [Cursor Integration Guide](./docs/cursor-integration.md) to configure this server for one project or all Cursor workspaces.
+
 See [Technical Roadmap](./docs/roadmap.md) for the planned v1.1, v1.2, and v2.0 evolution.
 
 ## Troubleshooting
