@@ -15,7 +15,9 @@
     "plugins": "node dist/cli.js",
     "plugin:add": "node dist/cli.js add",
     "plugin:remove": "node dist/cli.js remove",
-    "plugin:list": "node dist/cli.js list"
+    "plugin:list": "node dist/cli.js list",
+    "registry:validate": "node dist/cli.js registry:validate",
+    "test": "npm run build && node --test dist/tests/*.test.js"
   },
   "dependencies": {
     "@cfworker/json-schema": "^4.1.1",

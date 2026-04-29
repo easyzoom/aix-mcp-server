@@ -203,9 +203,29 @@ node dist/cli.js add some-npm-package
 }
 ```
 
+## 质量检查
+
+```bash
+npm test
+npm run registry:validate
+```
+
+`registry:validate` 会在提交 PR 前检查 `mcp-registry.json` 和已配置的 JSON 插件。
+
 ## 架构概览
 
 ![AIX MCP Server architecture](./docs/assets/architecture.svg)
+
+贡献者可以阅读 [架构说明](./docs/architecture.md) 和 [Registry 字段规范](./docs/registry-schema.md) 了解模块边界与服务目录格式。
+
+后续版本规划见 [技术路线规划](./docs/roadmap.md)，覆盖 v1.1、v1.2 和 v2.0 的演进方向。
+
+## 故障排查
+
+- `http://localhost:3080/mcp` 返回 `Missing or invalid session ID`：这是浏览器直接打开 MCP 端点时的正常结果。请打开 Dashboard：`http://localhost:3080`，或通过 MCP 客户端连接。
+- Dashboard 改动没有出现：修改 TypeScript、插件或配置后，需要重新构建并重启服务或容器。
+- JSON 插件加载失败：运行 `npm run registry:validate`，它会返回具体出错字段路径。
+- Sandbox 升级失败：在 Dashboard 查看失败检查项和 `Fix` 提示，修复后重新运行 sandbox。
 
 ## 项目结构
 

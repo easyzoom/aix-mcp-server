@@ -6,6 +6,7 @@ export interface SandboxCheck {
   pass: boolean;
   severity: "info" | "warning" | "critical";
   detail?: string;
+  recommendation?: string;
 }
 
 export interface SandboxResult {
@@ -74,6 +75,7 @@ function staticChecks(entry: McpRegistryEntry, target: SecurityLevel): SandboxCh
     label: "Complete metadata: name, summary, description, license, contributor",
     pass: !!entry.name && entry.summary.length >= 5 && entry.description.length >= 10 && !!entry.license && !!entry.contributor,
     severity: "warning",
+    recommendation: "Fill name, a concise summary, a longer description, license, and contributor before requesting promotion.",
   });
   add(checks, {
     id: "version",
@@ -81,6 +83,7 @@ function staticChecks(entry: McpRegistryEntry, target: SecurityLevel): SandboxCh
     pass: /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(entry.version),
     severity: "warning",
     detail: entry.version,
+    recommendation: "Use semantic version format such as 1.0.0 or 1.2.0-beta.1.",
   });
   add(checks, {
     id: "capabilities",
@@ -88,6 +91,9 @@ function staticChecks(entry: McpRegistryEntry, target: SecurityLevel): SandboxCh
     pass: target === "S2" || target === "S1" ? caps >= 3 : caps > 0,
     severity: "warning",
     detail: String(caps),
+    recommendation: target === "S2" || target === "S1"
+      ? "Declare at least three tools, prompts, or resources so users know what this service provides."
+      : "Declare at least one tool, prompt, or resource.",
   });
   add(checks, {
     id: "install",
@@ -98,6 +104,7 @@ function staticChecks(entry: McpRegistryEntry, target: SecurityLevel): SandboxCh
         (install.type === "proxy" && !!proxyUrl) ||
         (install.type === "standalone" && (!!command || !!install.cursorConfig || !!install.claudeConfig))),
     severity: "critical",
+    recommendation: "Provide pluginSource for plugin entries, proxyUrl for proxy entries, or command/client config for standalone entries.",
   });
   add(checks, {
     id: "command-safety",
@@ -105,6 +112,7 @@ function staticChecks(entry: McpRegistryEntry, target: SecurityLevel): SandboxCh
     pass: !command || !DANGEROUS_COMMAND_PATTERNS.some((pattern) => pattern.test(command)),
     severity: "critical",
     detail: command || "no command",
+    recommendation: "Remove dangerous shell patterns such as sudo, rm -rf, chmod 777, or curl/wget piped to a shell.",
   });
   add(checks, {
     id: "plugin-path",
@@ -112,6 +120,7 @@ function staticChecks(entry: McpRegistryEntry, target: SecurityLevel): SandboxCh
     pass: install?.type !== "plugin" || (pluginSource.startsWith("./plugins/") && !pluginSource.includes("..")),
     severity: "critical",
     detail: pluginSource || "not a plugin",
+    recommendation: "Keep local plugin entries under ./plugins/ and avoid parent-directory traversal.",
   });
 
   if (target === "S2" || target === "S1") {
@@ -121,6 +130,7 @@ function staticChecks(entry: McpRegistryEntry, target: SecurityLevel): SandboxCh
       pass: /^https:\/\//.test(entry.source) || entry.source.startsWith("./"),
       severity: "warning",
       detail: entry.source,
+      recommendation: "Use an HTTPS source URL or a local built-in source path.",
     });
   }
 
@@ -131,12 +141,14 @@ function staticChecks(entry: McpRegistryEntry, target: SecurityLevel): SandboxCh
       pass: isTrustedOfficialSource(entry.source),
       severity: "critical",
       detail: entry.source,
+      recommendation: "S1 is reserved for built-in plugins or trusted official repositories such as modelcontextprotocol, anthropics, or microsoft/playwright-mcp.",
     });
     add(checks, {
       id: "verified",
       label: "S1 requires verified=true",
       pass: entry.verified === true,
       severity: "critical",
+      recommendation: "Promote through S2 verification first or mark the entry verified only after maintainers have reviewed it.",
     });
   }
 
@@ -165,6 +177,7 @@ async function networkChecks(entry: McpRegistryEntry, target: SecurityLevel): Pr
         pass: resp.ok,
         severity: "critical",
         detail: `HTTP ${resp.status}`,
+        recommendation: "Make sure the proxy URL is reachable and responds to an MCP initialize request.",
       });
     } catch (err) {
       add(checks, {
@@ -173,6 +186,7 @@ async function networkChecks(entry: McpRegistryEntry, target: SecurityLevel): Pr
         pass: false,
         severity: "critical",
         detail: err instanceof Error ? err.message : String(err),
+        recommendation: "Check the proxy URL, network access, and whether the remote MCP server is running.",
       });
     }
   }
@@ -189,6 +203,7 @@ async function networkChecks(entry: McpRegistryEntry, target: SecurityLevel): Pr
         pass: resp.ok,
         severity: "warning",
         detail: `HTTP ${resp.status}`,
+        recommendation: "Ensure the source repository or documentation URL is public and reachable.",
       });
     } catch (err) {
       const trusted = isTrustedOfficialSource(entry.source);
@@ -198,6 +213,9 @@ async function networkChecks(entry: McpRegistryEntry, target: SecurityLevel): Pr
         pass: trusted,
         severity: "warning",
         detail: err instanceof Error ? err.message : String(err),
+        recommendation: trusted
+          ? "Trusted official sources may still pass when the local network times out; retry from a network that can reach GitHub."
+          : "Use a public source URL or retry after network connectivity is restored.",
       });
     }
   }

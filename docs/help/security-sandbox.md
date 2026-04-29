@@ -42,3 +42,5 @@ Checks include:
 - Source URL reachability, when applicable
 
 Use **Run Sandbox** to inspect validation results, or **Upgrade with Sandbox** to validate and upgrade automatically when all required checks pass.
+
+When a check fails, the Dashboard shows a `Fix` message under that check. Use it as the next action before rerunning sandbox validation.

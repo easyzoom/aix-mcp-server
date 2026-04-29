@@ -4,8 +4,11 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { execSync } from "node:child_process";
 import type { PluginsConfig } from "./plugin.js";
+import { readRegistry } from "./registry.js";
+import { validateJsonPlugins, validateRegistry } from "./validation.js";
 
 const CONFIG_FILE = "mcp-plugins.json";
+const REGISTRY_FILE = "mcp-registry.json";
 
 function getConfigPath(): string {
   return resolve(process.cwd(), CONFIG_FILE);
@@ -113,6 +116,34 @@ async function listPlugins(): Promise<void> {
   }
 }
 
+async function validateRegistryCommand(): Promise<void> {
+  const projectRoot = process.cwd();
+  const registry = await readRegistry(resolve(projectRoot, REGISTRY_FILE));
+  const config = await readConfig();
+  const issues = [
+    ...validateRegistry(registry),
+    ...(await validateJsonPlugins(projectRoot, config.plugins.map((entry) => entry.source))),
+  ];
+
+  if (issues.length === 0) {
+    console.log("Registry and JSON plugins are valid.");
+    return;
+  }
+
+  const errors = issues.filter((item) => item.level === "error");
+  for (const item of issues) {
+    const prefix = item.level === "error" ? "ERROR" : "WARN ";
+    console.log(`[${prefix}] ${item.path}: ${item.message}`);
+  }
+
+  if (errors.length > 0) {
+    console.error(`Validation failed with ${errors.length} error(s).`);
+    process.exit(1);
+  }
+
+  console.log(`Validation completed with ${issues.length} warning(s).`);
+}
+
 async function enablePlugin(source: string): Promise<void> {
   const config = await readConfig();
   const entry = config.plugins.find((p) => p.source === source);
@@ -149,11 +180,13 @@ Commands:
   enable <source>    Enable a disabled plugin
   disable <source>   Disable a plugin without removing it
   list               List all configured plugins
+  registry:validate  Validate mcp-registry.json and configured JSON plugins
 
 Examples:
   mcp-plugins add mcp-plugin-github --config '{"token":"ghp_xxx"}'
   mcp-plugins add ./plugins/my-custom
   mcp-plugins disable ./plugins/system
+  mcp-plugins registry:validate
   mcp-plugins list
 `.trim());
 }
@@ -183,6 +216,9 @@ async function main(): Promise<void> {
       break;
     case "list":
       await listPlugins();
+      break;
+    case "registry:validate":
+      await validateRegistryCommand();
       break;
     default:
       printHelp();
