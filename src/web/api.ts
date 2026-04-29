@@ -1,6 +1,6 @@
 import type { Router } from "express";
-import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile, readdir, writeFile } from "node:fs/promises";
+import { basename, join } from "node:path";
 import type { PluginsConfig } from "../plugin.js";
 import type { ProxyConfig } from "../proxy.js";
 import { readRegistry, writeRegistry, SECURITY_LEVELS, type McpRegistry, type McpRegistryEntry, type SecurityLevel } from "../registry.js";
@@ -11,6 +11,7 @@ const CONFIG_FILE = "mcp-plugins.json";
 const PROXY_FILE = "mcp-proxy.json";
 const REGISTRY_FILE = "mcp-registry.json";
 const LLM_CONFIG_FILE = "llm-config.json";
+const HELP_DOCS_DIR = "docs/help";
 
 type ManagedService =
   | {
@@ -123,11 +124,33 @@ function buildManagedServices(plugins: PluginsConfig, proxy: ProxyConfig, regist
   return services;
 }
 
+function applyRegistryEdit(entry: McpRegistryEntry, body: Partial<McpRegistryEntry> & { command?: string; pluginSource?: string; proxyUrl?: string }): void {
+  entry.name = body.name || entry.name;
+  entry.version = body.version || entry.version;
+  entry.source = body.source || entry.source;
+  entry.summary = body.summary || entry.summary;
+  entry.description = body.description || entry.description;
+  entry.contributor = body.contributor || entry.contributor;
+  entry.license = body.license || entry.license;
+  entry.enabled = body.enabled ?? entry.enabled;
+  if (Array.isArray(body.tags)) entry.tags = body.tags;
+  if (Array.isArray(body.relatedIds)) entry.relatedIds = body.relatedIds;
+  if (body.capabilities) entry.capabilities = body.capabilities;
+  if (body.install) entry.install = { ...entry.install, ...body.install };
+  if (body.command !== undefined) entry.install.command = body.command;
+  if (body.pluginSource !== undefined) entry.install.pluginSource = body.pluginSource;
+  if (body.proxyUrl !== undefined) entry.install.proxyUrl = body.proxyUrl;
+
+  entry.securityLevel = "S4";
+  entry.verified = false;
+}
+
 export function setupApiRoutes(router: Router, projectRoot: string, getSessionCount: () => number): void {
   const configPath = join(projectRoot, CONFIG_FILE);
   const proxyPath = join(projectRoot, PROXY_FILE);
   const registryPath = join(projectRoot, REGISTRY_FILE);
   const llmConfigPath = join(projectRoot, LLM_CONFIG_FILE);
+  const helpDocsPath = join(projectRoot, HELP_DOCS_DIR);
   const startTime = Date.now();
 
   router.get("/api/status", async (_req, res) => {
@@ -227,6 +250,73 @@ export function setupApiRoutes(router: Router, projectRoot: string, getSessionCo
     res.status(400).json({ error: "unsupported service kind" });
   });
 
+  router.put("/api/services/:id", async (req, res) => {
+    const decoded = decodeServiceId(req.params.id);
+    if (!decoded) { res.status(400).json({ error: "invalid service id" }); return; }
+
+    if (decoded.kind === "plugin") {
+      const { source, enabled, config } = req.body as Partial<McpRegistryEntry> & { source?: string; enabled?: boolean; config?: Record<string, unknown> };
+      if (!source) { res.status(400).json({ error: "source required" }); return; }
+      const cfg = await readJSON<PluginsConfig>(configPath, { plugins: [] });
+      const entry = cfg.plugins.find((p) => p.source === decoded.value);
+      if (!entry) { res.status(404).json({ error: "not found" }); return; }
+      entry.source = source;
+      entry.enabled = enabled ?? entry.enabled;
+      if (config && Object.keys(config).length > 0) entry.config = config;
+      else delete entry.config;
+      await writeJSON(configPath, cfg);
+
+      const registry = await readRegistry(registryPath);
+      const regEntry = registry.entries.find((item) => item.install.type === "plugin" && item.install.pluginSource === decoded.value);
+      if (regEntry) {
+        applyRegistryEdit(regEntry, { ...req.body, source, pluginSource: source, enabled });
+        await writeRegistry(registryPath, registry);
+      }
+
+      res.json({ ok: true, id: serviceId("plugin", source), requiresSandbox: !!regEntry });
+      return;
+    }
+
+    if (decoded.kind === "proxy") {
+      const { name, url, enabled, description } = req.body as Partial<McpRegistryEntry> & { name?: string; url?: string; enabled?: boolean; description?: string };
+      if (!name || !url) { res.status(400).json({ error: "name and url required" }); return; }
+      const cfg = await readJSON<ProxyConfig>(proxyPath, { targets: [] });
+      const entry = cfg.targets.find((t) => t.name === decoded.value);
+      if (!entry) { res.status(404).json({ error: "not found" }); return; }
+      const oldUrl = entry.url;
+      entry.name = name;
+      entry.url = url;
+      entry.enabled = enabled ?? entry.enabled;
+      entry.description = description || undefined;
+      await writeJSON(proxyPath, cfg);
+
+      const registry = await readRegistry(registryPath);
+      const regEntry = registry.entries.find((item) => item.install.type === "proxy" && item.install.proxyUrl === oldUrl);
+      if (regEntry) {
+        applyRegistryEdit(regEntry, { ...req.body, name, source: url, proxyUrl: url, description, enabled });
+        await writeRegistry(registryPath, registry);
+      }
+
+      res.json({ ok: true, id: serviceId("proxy", name), requiresSandbox: !!regEntry });
+      return;
+    }
+
+    if (decoded.kind === "standalone") {
+      const body = req.body as Partial<McpRegistryEntry> & { command?: string };
+      const registry = await readRegistry(registryPath);
+      const entry = registry.entries.find((e) => e.id === decoded.value);
+      if (!entry) { res.status(404).json({ error: "not found" }); return; }
+
+      applyRegistryEdit(entry, body);
+      await writeRegistry(registryPath, registry);
+
+      res.json({ ok: true, id: serviceId("standalone", entry.id), requiresSandbox: true });
+      return;
+    }
+
+    res.status(400).json({ error: "unsupported service kind" });
+  });
+
   router.post("/api/services/:id/test", async (req, res) => {
     const decoded = decodeServiceId(req.params.id);
     if (!decoded) { res.status(400).json({ ok: false, message: "invalid service id" }); return; }
@@ -255,6 +345,35 @@ export function setupApiRoutes(router: Router, projectRoot: string, getSessionCo
     }
 
     res.json({ ok: true, message: decoded.kind === "standalone" ? "Standalone service config is managed in registry." : "Local plugin is configured." });
+  });
+
+  // ─── Help Docs ──────────────────────────────────────────────────────
+
+  router.get("/api/docs", async (_req, res) => {
+    try {
+      const files = (await readdir(helpDocsPath)).filter((file) => file.endsWith(".md")).sort();
+      const docs = await Promise.all(
+        files.map(async (file) => {
+          const id = file.replace(/\.md$/, "");
+          const content = await readFile(join(helpDocsPath, file), "utf-8");
+          const title = content.match(/^#\s+(.+)$/m)?.[1] ?? id;
+          return { id, title, file };
+        })
+      );
+      res.json({ docs });
+    } catch {
+      res.json({ docs: [] });
+    }
+  });
+
+  router.get("/api/docs/:id", async (req, res) => {
+    const id = basename(req.params.id).replace(/\.md$/, "");
+    try {
+      const content = await readFile(join(helpDocsPath, `${id}.md`), "utf-8");
+      res.type("text/markdown").send(content);
+    } catch {
+      res.status(404).json({ error: "not found" });
+    }
   });
 
   // ─── Plugin CRUD ────────────────────────────────────────────────────

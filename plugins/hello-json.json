@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "name": "hello-json",
+  "description": "Declarative JSON plugin example",
+  "tools": [
+    {
+      "name": "hello-json",
+      "title": "Hello JSON",
+      "description": "Return a greeting from a JSON-authored MCP tool",
+      "inputSchema": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name to greet"
+          },
+          "style": {
+            "type": "string",
+            "description": "Greeting style",
+            "enum": ["friendly", "formal"]
+          }
+        }
+      },
+      "response": {
+        "type": "template",
+        "text": "Hello {{name}}! This response comes from a JSON MCP plugin. Style: {{style}}."
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "hello-json-info",
+      "uri": "json-plugin://hello-json/info",
+      "title": "JSON Plugin Info",
+      "description": "Metadata for the JSON plugin example",
+      "mimeType": "application/json",
+      "json": {
+        "name": "hello-json",
+        "authoring": "json",
+        "safeActions": ["template", "json"]
+      }
+    }
+  ]
+}

@@ -4,15 +4,21 @@
 
 可扩展的 Model Context Protocol (MCP) 服务器，支持插件系统、代理转发、Web Dashboard 和服务注册中心。
 
+![AIX MCP Server banner](./docs/assets/banner.svg)
+
 ## 特性
 
 - **双传输模式** — stdio（用于 Cursor / Claude Desktop）和 Streamable HTTP
-- **插件系统** — 内置 6 个实用插件，支持通过 npm 包或本地路径扩展
+- **插件系统** — 内置 7 个实用插件，支持通过 npm 包、本地路径或 JSON 文件扩展
 - **代理转发** — 将多个远程 MCP 服务器聚合为一个统一端点
 - **Web Dashboard** — 可视化管理插件、代理、查看日志
 - **服务注册中心** — 预置常见 MCP 服务信息，支持一键安装和配置复制
 - **LLM 智能搜索** — AI 驱动的 MCP 服务发现与推荐
 - **Docker 部署** — 多阶段构建，开箱即用
+
+## 页面预览
+
+![Dashboard preview](./docs/assets/dashboard-preview.svg)
 
 ## 快速开始
 
@@ -47,11 +53,12 @@ docker compose down
 ## 内置插件
 
 | 插件 | Tools | 说明 |
-|------|-------|------|
+| ------ | ------- | ------ |
 | **calculator** | `calculator` | 数学表达式求值 |
 | **crypto** | `hash-text`, `random-uuid`, `random-string` | 哈希、UUID、随机字符串 |
 | **datetime** | `current-time`, `format-time` | 当前时间、时间格式化 |
 | **filesystem** | `list-files`, `read-file` + Resource | 文件列表、读取、文件资源 |
+| **hello-json** | `hello-json` + Resource | 声明式 JSON 插件示例 |
 | **system** | `run-command` + Resource | Shell 命令执行、系统信息资源 |
 | **text-utils** | `json-format`, `base64`, `text-stats` | JSON 格式化、Base64 编解码、文本统计 |
 
@@ -128,6 +135,47 @@ export default plugin;
 
 参考 `examples/mcp-plugin-example/` 目录获取完整示例。
 
+### JSON 插件
+
+你也可以只用 JSON 创建轻量本地 MCP 插件，类似分享一个油猴脚本。JSON 插件是声明式的，不会执行任意 JavaScript；当前支持模板/json 工具响应和静态资源。
+
+创建 `plugins/my-json-plugin.json`：
+
+```json
+{
+  "schemaVersion": 1,
+  "name": "my-json-plugin",
+  "description": "A declarative JSON MCP plugin",
+  "tools": [
+    {
+      "name": "hello",
+      "title": "Hello",
+      "description": "Return a greeting",
+      "inputSchema": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "description": "Name to greet" }
+        }
+      },
+      "response": {
+        "type": "template",
+        "text": "Hello {{name}}!"
+      }
+    }
+  ]
+}
+```
+
+然后添加到 `mcp-plugins.json`：
+
+```json
+{
+  "source": "./plugins/my-json-plugin.json",
+  "enabled": true
+}
+```
+
 ### 安装插件
 
 ```bash
@@ -155,9 +203,13 @@ node dist/cli.js add some-npm-package
 }
 ```
 
+## 架构概览
+
+![AIX MCP Server architecture](./docs/assets/architecture.svg)
+
 ## 项目结构
 
-```
+```text
 aix-mcp-server/
 ├── src/
 │   ├── index.ts          # 入口（stdio / HTTP 传输）

@@ -3,5 +3,5 @@ dist
 .git
 .github
 .vscode
-*.md
+README*.md
 *.log

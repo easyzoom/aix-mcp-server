@@ -4,15 +4,21 @@
 
 An extensible Model Context Protocol (MCP) server with a plugin system, proxy forwarding, Web Dashboard, and a built-in service registry.
 
+![AIX MCP Server banner](./docs/assets/banner.svg)
+
 ## Features
 
 - **Dual Transport** — stdio (for Cursor / Claude Desktop) and Streamable HTTP
-- **Plugin System** — 6 built-in utility plugins; extend via npm packages or local paths
+- **Plugin System** — 7 built-in utility plugins; extend via npm packages, local paths, or JSON files
 - **Proxy Forwarding** — Aggregate multiple remote MCP servers into a single endpoint
 - **Web Dashboard** — Manage plugins, proxies, and logs through a visual interface
 - **Service Registry** — Pre-loaded catalog of popular MCP services with one-click install and config copy
 - **LLM-Powered Search** — AI-driven discovery and recommendations for MCP services
 - **Docker Ready** — Multi-stage build, works out of the box
+
+## Preview
+
+![Dashboard preview](./docs/assets/dashboard-preview.svg)
 
 ## Quick Start
 
@@ -47,11 +53,12 @@ The service listens on `http://localhost:3080` by default.
 ## Built-in Plugins
 
 | Plugin | Tools | Description |
-|--------|-------|-------------|
+| -------- | ------- | ------------- |
 | **calculator** | `calculator` | Math expression evaluation |
 | **crypto** | `hash-text`, `random-uuid`, `random-string` | Hashing, UUID, random strings |
 | **datetime** | `current-time`, `format-time` | Current time, time formatting |
 | **filesystem** | `list-files`, `read-file` + Resource | File listing, reading, file resource |
+| **hello-json** | `hello-json` + Resource | Declarative JSON-authored plugin example |
 | **system** | `run-command` + Resource | Shell command execution, system info resource |
 | **text-utils** | `json-format`, `base64`, `text-stats` | JSON formatting, Base64 encode/decode, text stats |
 
@@ -128,6 +135,47 @@ export default plugin;
 
 See `examples/mcp-plugin-example/` for a complete example.
 
+### JSON Plugins
+
+You can also create lightweight local MCP plugins using only JSON, similar to sharing a userscript. JSON plugins are declarative and do not execute arbitrary JavaScript. They currently support template/json tool responses and static resources.
+
+Create `plugins/my-json-plugin.json`:
+
+```json
+{
+  "schemaVersion": 1,
+  "name": "my-json-plugin",
+  "description": "A declarative JSON MCP plugin",
+  "tools": [
+    {
+      "name": "hello",
+      "title": "Hello",
+      "description": "Return a greeting",
+      "inputSchema": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "description": "Name to greet" }
+        }
+      },
+      "response": {
+        "type": "template",
+        "text": "Hello {{name}}!"
+      }
+    }
+  ]
+}
+```
+
+Then add it to `mcp-plugins.json`:
+
+```json
+{
+  "source": "./plugins/my-json-plugin.json",
+  "enabled": true
+}
+```
+
 ### Installing Plugins
 
 ```bash
@@ -155,9 +203,13 @@ Edit `mcp-proxy.json` to add remote MCP servers:
 }
 ```
 
+## Architecture
+
+![AIX MCP Server architecture](./docs/assets/architecture.svg)
+
 ## Project Structure
 
-```
+```text
 aix-mcp-server/
 ├── src/
 │   ├── index.ts          # Entry (stdio / HTTP transport)
