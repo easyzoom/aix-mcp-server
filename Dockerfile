@@ -20,6 +20,8 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY mcp-plugins.json mcp-proxy.json mcp-registry.json llm-config.json ./
+COPY plugins/ plugins/
+COPY docs/ docs/
 COPY --from=builder /app/dist/ dist/
 
 EXPOSE 3000

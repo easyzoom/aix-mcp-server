@@ -24,6 +24,10 @@
     {
       "source": "./plugins/text-utils",
       "enabled": true
+    },
+    {
+      "source": "./plugins/hello-json.json",
+      "enabled": true
     }
   ]
 }

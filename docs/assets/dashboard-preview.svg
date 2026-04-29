@@ -1,0 +1,69 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="720">
+      <stop stop-color="#0F1117"/>
+      <stop offset="1" stop-color="#1A1D27"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#242736"/>
+      <stop offset="1" stop-color="#171A25"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" rx="28" fill="url(#bg)"/>
+  <rect x="42" y="42" width="1116" height="636" rx="22" fill="#121520" stroke="#2E3148"/>
+  <rect x="42" y="42" width="1116" height="70" rx="22" fill="#1A1D27"/>
+  <text x="78" y="87" fill="#E4E6F0" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="800">AIX MCP Server</text>
+  <text x="1030" y="86" fill="#86EFAC" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14" font-weight="700">Running</text>
+  <circle cx="1012" cy="81" r="7" fill="#22C55E"/>
+  <g font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="700">
+    <rect x="78" y="138" width="146" height="42" rx="10" fill="#6366F1"/>
+    <text x="126" y="164" fill="#FFFFFF">Guide</text>
+    <rect x="232" y="138" width="146" height="42" rx="10" fill="#242736"/>
+    <text x="277" y="164" fill="#8B8FA8">Plugins</text>
+    <rect x="386" y="138" width="146" height="42" rx="10" fill="#242736"/>
+    <text x="432" y="164" fill="#8B8FA8">Proxy</text>
+    <rect x="540" y="138" width="170" height="42" rx="10" fill="#242736"/>
+    <text x="580" y="164" fill="#8B8FA8">Contributors</text>
+    <rect x="718" y="138" width="146" height="42" rx="10" fill="#242736"/>
+    <text x="766" y="164" fill="#8B8FA8">Help</text>
+  </g>
+  <rect x="78" y="210" width="610" height="44" rx="10" fill="#242736" stroke="#2E3148"/>
+  <text x="102" y="238" fill="#8B8FA8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14">Search or describe what you need...</text>
+  <rect x="704" y="210" width="64" height="44" rx="10" fill="#6366F1"/>
+  <text x="724" y="238" fill="#FFFFFF" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14" font-weight="800">AI</text>
+  <rect x="790" y="210" width="92" height="44" rx="10" fill="#242736" stroke="#2E3148"/>
+  <text x="818" y="238" fill="#E4E6F0" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14">S1</text>
+  <rect x="894" y="210" width="112" height="44" rx="10" fill="#242736" stroke="#2E3148"/>
+  <text x="922" y="238" fill="#E4E6F0" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14">builtin</text>
+  <g font-family="Inter,Segoe UI,Arial,sans-serif">
+    <rect x="78" y="286" width="322" height="170" rx="16" fill="url(#card)" stroke="#2E3148"/>
+    <text x="104" y="326" fill="#E4E6F0" font-size="19" font-weight="800">Hello JSON Plugin</text>
+    <rect x="276" y="304" width="76" height="26" rx="13" fill="#22C55E" fill-opacity="0.14" stroke="#22C55E" stroke-opacity="0.45"/>
+    <text x="296" y="322" fill="#86EFAC" font-size="11" font-weight="800">S1</text>
+    <text x="104" y="362" fill="#8B8FA8" font-size="14">Declarative JSON-authored MCP plugin example.</text>
+    <rect x="104" y="394" width="76" height="26" rx="13" fill="#242736"/>
+    <text x="126" y="412" fill="#A5B4FC" font-size="11">json</text>
+    <rect x="188" y="394" width="106" height="26" rx="13" fill="#242736"/>
+    <text x="212" y="412" fill="#A5B4FC" font-size="11">template</text>
+    <text x="104" y="438" fill="#8B8FA8" font-size="12">1 tool " 1 resource " v1.0.0</text>
+    <rect x="438" y="286" width="322" height="170" rx="16" fill="url(#card)" stroke="#2E3148"/>
+    <text x="464" y="326" fill="#E4E6F0" font-size="19" font-weight="800">Playwright MCP</text>
+    <rect x="630" y="304" width="76" height="26" rx="13" fill="#3B82F6" fill-opacity="0.14" stroke="#3B82F6" stroke-opacity="0.45"/>
+    <text x="650" y="322" fill="#93C5FD" font-size="11" font-weight="800">S2</text>
+    <text x="464" y="362" fill="#8B8FA8" font-size="14">Browser automation for testing and workflows.</text>
+    <text x="464" y="438" fill="#8B8FA8" font-size="12">5 tools " standalone " sandbox ready</text>
+    <rect x="798" y="286" width="322" height="170" rx="16" fill="url(#card)" stroke="#2E3148"/>
+    <text x="824" y="326" fill="#E4E6F0" font-size="19" font-weight="800">Filesystem</text>
+    <rect x="982" y="304" width="76" height="26" rx="13" fill="#22C55E" fill-opacity="0.14" stroke="#22C55E" stroke-opacity="0.45"/>
+    <text x="1002" y="322" fill="#86EFAC" font-size="11" font-weight="800">S1</text>
+    <text x="824" y="362" fill="#8B8FA8" font-size="14">Read files and expose local file resources.</text>
+    <text x="824" y="438" fill="#8B8FA8" font-size="12">2 tools " 1 resource " plugin</text>
+  </g>
+  <rect x="78" y="504" width="1042" height="94" rx="16" fill="#171A25" stroke="#2E3148"/>
+  <text x="104" y="540" fill="#E4E6F0" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" font-weight="800">Managed MCP Services</text>
+  <text x="104" y="570" fill="#8B8FA8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14">Unified management for plugins, proxy targets, standalone MCP configs, security status, and sandbox validation.</text>
+  <rect x="890" y="532" width="84" height="34" rx="8" fill="#242736"/>
+  <text x="918" y="554" fill="#E4E6F0" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13">Edit</text>
+  <rect x="988" y="532" width="84" height="34" rx="8" fill="#6366F1"/>
+  <text x="1008" y="554" fill="#FFFFFF" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="700">Sandbox</text>
+</svg>
