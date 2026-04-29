@@ -203,9 +203,29 @@ Edit `mcp-proxy.json` to add remote MCP servers:
 }
 ```
 
+## Quality Checks
+
+```bash
+npm test
+npm run registry:validate
+```
+
+`registry:validate` checks `mcp-registry.json` and configured JSON plugins before you open a pull request.
+
 ## Architecture
 
 ![AIX MCP Server architecture](./docs/assets/architecture.svg)
+
+See [Architecture Notes](./docs/architecture.md) and [Registry Schema](./docs/registry-schema.md) for contributor-facing design details.
+
+See [Technical Roadmap](./docs/roadmap.md) for the planned v1.1, v1.2, and v2.0 evolution.
+
+## Troubleshooting
+
+- `http://localhost:3080/mcp` returns `Missing or invalid session ID`: this is expected when opening the MCP endpoint directly in a browser. Use the Dashboard at `http://localhost:3080`, or connect through an MCP client.
+- Dashboard changes do not appear: rebuild and restart the server or container after changing TypeScript, plugins, or config files.
+- JSON plugin fails to load: run `npm run registry:validate` to get an exact field path for the invalid JSON.
+- Sandbox upgrade fails: inspect the failed check and its `Fix` message in the Dashboard, then rerun sandbox validation.
 
 ## Project Structure
 

@@ -74,6 +74,15 @@ header h1 span { color: var(--accent2); }
 .proxy-form input:focus, .plugin-form input:focus { outline: none; border-color: var(--accent); }
 
 .empty { text-align: center; color: var(--text2); padding: 40px; font-size: 14px; }
+.empty .empty-title { color: var(--text); font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.empty .empty-action { margin-top: 14px; }
+
+.toast-stack { position: fixed; right: 20px; top: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 200; width: min(360px, calc(100vw - 40px)); }
+.toast { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: var(--surface); box-shadow: 0 12px 36px rgba(0,0,0,0.35); font-size: 13px; line-height: 1.5; animation: toastIn 0.16s ease-out; }
+.toast.success { border-color: rgba(34,197,94,0.32); color: var(--green); }
+.toast.error { border-color: rgba(239,68,68,0.32); color: var(--red); }
+.toast.info { color: var(--accent2); }
+@keyframes toastIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 
 .log-area { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; max-height: 400px; overflow-y: auto; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; line-height: 1.7; }
 .log-area .log-line { color: var(--text2); }
@@ -287,6 +296,7 @@ header h1 span { color: var(--accent2); }
 </style>
 </head>
 <body>
+<div class="toast-stack" id="toast-stack"></div>
 <div class="app">
   <header>
     <h1><span>AIX</span> MCP Server <small id="server-version" style="font-size:12px;color:var(--text2);font-weight:500;margin-left:8px">v-</small></h1>
@@ -528,7 +538,22 @@ document.querySelectorAll('.tab').forEach(tab => {
 
 async function api(path, opts) {
   const res = await fetch(API + '/api' + path, { headers: { 'Content-Type': 'application/json' }, ...opts });
-  return res.json();
+  const contentType = res.headers.get('content-type') || '';
+  const data = contentType.includes('application/json') ? await res.json() : await res.text();
+  if (!res.ok) {
+    const message = typeof data === 'object' && data ? (data.message || data.error || `HTTP ${res.status}`) : String(data || `HTTP ${res.status}`);
+    throw new Error(message);
+  }
+  return data;
+}
+
+function notify(type, message) {
+  const stack = document.getElementById('toast-stack');
+  const el = document.createElement('div');
+  el.className = `toast ${type || 'info'}`;
+  el.textContent = message;
+  stack.appendChild(el);
+  setTimeout(() => el.remove(), type === 'error' ? 5200 : 3200);
 }
 
 // ─── Status / Unified MCP Services / Proxy ─────────────────────
@@ -549,6 +574,7 @@ async function refresh() {
     document.getElementById('status-text').textContent = 'Running';
   } catch(e) {
     document.getElementById('status-text').textContent = 'Error';
+    notify('error', 'Dashboard failed to refresh: ' + e.message);
   }
 }
 
@@ -556,7 +582,10 @@ function renderServices(services) {
   managedServices = services;
   const el = document.getElementById('service-list');
   if (!el) return;
-  if (services.length === 0) { el.innerHTML = '<div class="empty">No MCP services configured</div>'; return; }
+  if (services.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="empty-title">No MCP services configured</div><div>Add a local plugin, proxy target, or standalone MCP service to get started.</div><div class="empty-action"><button class="btn primary" onclick="openAddMcp()">+ Add MCP Service</button></div></div>';
+    return;
+  }
   el.innerHTML = services.map(s => {
     const subtitle = s.kind === 'plugin' ? s.source : s.kind === 'proxy' ? s.url : (s.command || s.source || '');
     return `
@@ -586,22 +615,37 @@ function renderServices(services) {
 }
 
 async function toggleService(id) {
-  await api('/services/' + encodeURIComponent(id) + '/toggle', { method: 'POST' });
-  addLog('info', `Toggled service: ${id}`);
-  refresh();
+  try {
+    const r = await api('/services/' + encodeURIComponent(id) + '/toggle', { method: 'POST' });
+    addLog('info', `Toggled service: ${id}`);
+    notify('success', `Service ${r.enabled === false ? 'disabled' : 'enabled'}. Restart may be required.`);
+    refresh();
+  } catch (err) {
+    notify('error', 'Toggle failed: ' + err.message);
+  }
 }
 
 async function removeService(id, name) {
-  if (!confirm('Remove service: ' + name + '?')) return;
-  await api('/services/' + encodeURIComponent(id), { method: 'DELETE' });
-  addLog('info', `Removed service: ${name}`);
-  refresh();
+  if (!confirm(`Remove service "${name}"?\n\nPlugins and proxy targets will be removed from config. Standalone registry services will be hidden.`)) return;
+  try {
+    await api('/services/' + encodeURIComponent(id), { method: 'DELETE' });
+    addLog('info', `Removed service: ${name}`);
+    notify('success', `Removed ${name}. Restart may be required.`);
+    refresh();
+  } catch (err) {
+    notify('error', 'Remove failed: ' + err.message);
+  }
 }
 
 async function testService(id) {
   addLog('info', `Testing service: ${id}...`);
-  const r = await api('/services/' + encodeURIComponent(id) + '/test', { method: 'POST' });
-  addLog(r.ok ? 'info' : 'error', `${id}: ${r.message}`);
+  try {
+    const r = await api('/services/' + encodeURIComponent(id) + '/test', { method: 'POST' });
+    addLog(r.ok ? 'info' : 'error', `${id}: ${r.message}`);
+    notify(r.ok ? 'success' : 'error', r.message);
+  } catch (err) {
+    notify('error', 'Test failed: ' + err.message);
+  }
 }
 
 async function openEditService(id) {
@@ -696,7 +740,7 @@ async function saveEditService() {
     const configText = document.getElementById('edit-config').value.trim();
     let config = undefined;
     if (configText) {
-      try { config = JSON.parse(configText); } catch { alert('Invalid config JSON'); return; }
+      try { config = JSON.parse(configText); } catch { notify('error', 'Invalid config JSON'); return; }
     }
     body = { ...body, source: document.getElementById('edit-source').value.trim(), config };
   } else if (editingService.kind === 'proxy') {
@@ -744,12 +788,18 @@ async function saveEditService() {
     };
   }
 
-  const r = await api('/services/' + encodeURIComponent(editingService.id), { method: 'PUT', body: JSON.stringify(body) });
-  if (r.error) { alert('Save failed: ' + r.error); return; }
-  addLog('info', `Updated service: ${editingService.name}`);
-  if (r.requiresSandbox) {
-    alert('Saved. Security level has been reset to S4. Please run sandbox validation before promoting this service.');
-    addLog('info', `Security reset to S4; sandbox required: ${editingService.name}`);
+  try {
+    const r = await api('/services/' + encodeURIComponent(editingService.id), { method: 'PUT', body: JSON.stringify(body) });
+    addLog('info', `Updated service: ${editingService.name}`);
+    if (r.requiresSandbox) {
+      notify('info', 'Saved. Security level reset to S4; run sandbox before promoting this service.');
+      addLog('info', `Security reset to S4; sandbox required: ${editingService.name}`);
+    } else {
+      notify('success', 'Service saved.');
+    }
+  } catch (err) {
+    notify('error', 'Save failed: ' + err.message);
+    return;
   }
   closeEditService();
   refresh();
@@ -763,12 +813,12 @@ function splitCsv(value) {
 function parseOptionalJson(value, label) {
   const text = String(value || '').trim();
   if (!text) return undefined;
-  try { return JSON.parse(text); } catch { alert('Invalid ' + label); return false; }
+  try { return JSON.parse(text); } catch { notify('error', 'Invalid ' + label); return false; }
 }
 
 function renderProxies(proxies) {
   const el = document.getElementById('proxy-list');
-  if (proxies.length === 0) { el.innerHTML = '<div class="empty">No proxy targets configured</div>'; return; }
+  if (proxies.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-title">No proxy targets configured</div><div>Proxy targets let AIX aggregate remote MCP endpoints behind one server.</div><div class="empty-action"><button class="btn" onclick="openAddMcp()">+ Add Proxy</button></div></div>'; return; }
   el.innerHTML = proxies.map(p => `
     <div class="card">
       <div class="card-header">
@@ -1179,14 +1229,16 @@ function closeModal() { document.getElementById('modal-overlay').classList.remov
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
 async function installEntry(id) {
-  const r = await api('/registry/' + id + '/install', { method: 'POST' });
-  if (r.ok) {
-    alert(r.message);
-    addLog('info', r.message);
-    loadGuide();
-    refresh();
-  } else {
-    alert('Install failed: ' + (r.error || 'unknown'));
+  try {
+    const r = await api('/registry/' + id + '/install', { method: 'POST' });
+    if (r.ok) {
+      notify('success', r.message);
+      addLog('info', r.message);
+      loadGuide();
+      refresh();
+    }
+  } catch (err) {
+    notify('error', 'Install failed: ' + err.message);
   }
 }
 
@@ -1196,6 +1248,7 @@ async function copyConfig(btn, id, type) {
   if (!config) return;
   await navigator.clipboard.writeText(JSON.stringify(config, null, 2));
   await api('/registry/' + id + '/copy', { method: 'POST' });
+  notify('success', `${type === 'cursor' ? 'Cursor' : 'Claude'} config copied.`);
   const orig = btn.textContent;
   btn.textContent = 'Copied!';
   setTimeout(() => { btn.textContent = orig; }, 1500);
@@ -1203,6 +1256,7 @@ async function copyConfig(btn, id, type) {
 
 async function copyText(btn, text) {
   await navigator.clipboard.writeText(text);
+  notify('success', 'Copied to clipboard.');
   const orig = btn.textContent;
   btn.textContent = 'Copied!';
   setTimeout(() => { btn.textContent = orig; }, 1500);
@@ -1215,7 +1269,10 @@ function renderSandboxResult(data, title) {
   for (const c of (data.checks ?? [])) {
     html += `<div class="upgrade-check ${c.pass ? 'pass' : 'fail'}">
       <span class="uc-icon">${c.pass ? '&#10003;' : '&#10007;'}</span>
-      <span>${esc(c.label || c.rule || c.id)}${c.detail ? ` <span style="color:var(--text2)">(${esc(c.detail)})</span>` : ''}</span>
+      <span>
+        ${esc(c.label || c.rule || c.id)}${c.detail ? ` <span style="color:var(--text2)">(${esc(c.detail)})</span>` : ''}
+        ${c.recommendation && !c.pass ? `<div style="color:var(--text2);font-size:11px;margin-top:3px">Fix: ${esc(c.recommendation)}</div>` : ''}
+      </span>
     </div>`;
   }
   html += '</div>';
@@ -1231,6 +1288,7 @@ async function runSandbox(id) {
   try {
     const data = await api('/registry/' + id + '/sandbox', { method: 'POST' });
     container.innerHTML = renderSandboxResult(data, 'Sandbox Validation');
+    notify(data.ok ? 'success' : 'error', data.message || 'Sandbox validation completed.');
   } catch (err) {
     container.innerHTML = `<div class="upgrade-result failure">Error: ${esc(err.message)}</div>`;
   }
@@ -1244,7 +1302,10 @@ async function applyUpgrade(id) {
     const data = await api('/registry/' + id + '/upgrade', { method: 'POST' });
     if (data.ok) {
       addLog('info', data.message + ': ' + id);
+      notify('success', data.message);
       setTimeout(() => { loadGuide(); openDetail(id); }, 500);
+    } else {
+      notify('error', data.message || 'Sandbox blocked upgrade.');
     }
     container.innerHTML = renderSandboxResult(data, 'Sandbox Upgrade Results');
   } catch (err) {
@@ -1268,21 +1329,23 @@ function onInstallTypeChange() {
 
 function tryParseJson(str) {
   if (!str.trim()) return undefined;
-  try { return JSON.parse(str); } catch { return undefined; }
+  try { return JSON.parse(str); } catch { return false; }
 }
 
 async function submitAddMcp() {
   const name = document.getElementById('mcp-name').value.trim();
   const id = document.getElementById('mcp-id').value.trim();
   const summary = document.getElementById('mcp-summary').value.trim();
-  if (!name || !id || !summary) { alert('Name, ID, and Summary are required'); return; }
+  if (!name || !id || !summary) { notify('error', 'Name, ID, and Summary are required'); return; }
 
   const installType = document.getElementById('mcp-install-type').value;
   const installValue = document.getElementById('mcp-install-value').value.trim();
   const tags = document.getElementById('mcp-tags').value.split(',').map(t => t.trim()).filter(Boolean);
   const tools = document.getElementById('mcp-tools').value.split(',').map(t => t.trim()).filter(Boolean);
   const cursorConfig = tryParseJson(document.getElementById('mcp-cursor-config').value);
+  if (cursorConfig === false) { notify('error', 'Invalid Cursor Config JSON'); return; }
   const claudeConfig = tryParseJson(document.getElementById('mcp-claude-config').value);
+  if (claudeConfig === false) { notify('error', 'Invalid Claude Config JSON'); return; }
 
   const entry = {
     id,
@@ -1312,7 +1375,6 @@ async function submitAddMcp() {
 
   try {
     const r = await api('/registry', { method: 'POST', body: JSON.stringify(entry) });
-    if (r.error) { alert('Error: ' + r.error); return; }
     addLog('info', `Added MCP service: ${name}`);
 
     if (document.getElementById('mcp-auto-install').checked) {
@@ -1320,11 +1382,12 @@ async function submitAddMcp() {
       if (ir.ok) addLog('info', ir.message);
     }
 
+    notify('success', `Added ${name}. Restart may be required.`);
     closeAddMcp();
     document.querySelectorAll('#add-mcp-form input:not([type=checkbox]), #add-mcp-form textarea').forEach(el => el.value = '');
     loadGuide();
     refresh();
-  } catch (err) { alert('Failed: ' + err.message); }
+  } catch (err) { notify('error', 'Failed: ' + err.message); }
 }
 
 // ─── LLM: State ──────────────────────────────────────────────

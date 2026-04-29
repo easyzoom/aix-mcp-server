@@ -64,3 +64,20 @@ Then add it to `mcp-plugins.json`:
 JSON plugins intentionally do not execute arbitrary JavaScript or shell commands.
 
 JSON 插件默认不执行任意 JavaScript 或 shell 命令。
+
+## Local Validation / 本地校验
+
+Before sharing a JSON plugin or opening a pull request, run:
+
+```bash
+npm run build
+npm run registry:validate
+```
+
+Validation errors include a field path, for example:
+
+```text
+./plugins/my-plugin.json: $.tools[0].response.type: must be template or json
+```
+
+This path tells you exactly which field should be fixed.

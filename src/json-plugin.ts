@@ -5,14 +5,14 @@ import type { McpPlugin } from "./plugin.js";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
-interface JsonSchemaProperty {
+export interface JsonSchemaProperty {
   type?: "string" | "number" | "integer" | "boolean";
   description?: string;
   default?: JsonValue;
   enum?: JsonValue[];
 }
 
-interface JsonPluginTool {
+export interface JsonPluginTool {
   name: string;
   title?: string;
   description?: string;
@@ -26,7 +26,7 @@ interface JsonPluginTool {
     | { type: "json"; data: JsonValue };
 }
 
-interface JsonPluginResource {
+export interface JsonPluginResource {
   name: string;
   uri: string;
   title?: string;
@@ -36,7 +36,7 @@ interface JsonPluginResource {
   json?: JsonValue;
 }
 
-interface JsonPluginDefinition {
+export interface JsonPluginDefinition {
   schemaVersion?: 1;
   name: string;
   description?: string;
@@ -90,26 +90,103 @@ function buildInputSchema(schema: JsonPluginTool["inputSchema"]): z.ZodObject<Re
   return z.object(shape);
 }
 
-function validateDefinition(def: JsonPluginDefinition): void {
-  if (!def.name || typeof def.name !== "string") {
-    throw new Error("JSON plugin requires a string name");
+function fail(path: string, message: string): never {
+  throw new Error(`${path}: ${message}`);
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function assertString(value: unknown, path: string, required = true): void {
+  if (value === undefined && !required) return;
+  if (typeof value !== "string" || value.trim() === "") fail(path, "must be a non-empty string");
+}
+
+function assertStringArray(value: unknown, path: string): void {
+  if (value === undefined) return;
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.trim() === "")) {
+    fail(path, "must be an array of non-empty strings");
   }
-  for (const tool of def.tools ?? []) {
-    if (!tool.name || !tool.response?.type) {
-      throw new Error(`Invalid JSON plugin tool in ${def.name}`);
+}
+
+function validateInputSchema(schema: unknown, path: string): void {
+  if (schema === undefined) return;
+  if (!isPlainObject(schema)) fail(path, "must be an object");
+  if (schema.type !== undefined && schema.type !== "object") fail(`${path}.type`, "must be object");
+  assertStringArray(schema.required, `${path}.required`);
+  const properties = schema.properties;
+  if (properties !== undefined && !isPlainObject(properties)) fail(`${path}.properties`, "must be an object");
+  for (const [name, prop] of Object.entries((properties ?? {}) as Record<string, unknown>)) {
+    const propPath = `${path}.properties.${name}`;
+    if (!isPlainObject(prop)) fail(propPath, "must be an object");
+    if (prop.type !== undefined && !["string", "number", "integer", "boolean"].includes(String(prop.type))) {
+      fail(`${propPath}.type`, "must be one of string, number, integer, boolean");
     }
-  }
-  for (const resource of def.resources ?? []) {
-    if (!resource.name || !resource.uri || (!("text" in resource) && !("json" in resource))) {
-      throw new Error(`Invalid JSON plugin resource in ${def.name}`);
+    assertString(prop.description, `${propPath}.description`, false);
+    if (prop.enum !== undefined && (!Array.isArray(prop.enum) || prop.enum.length === 0)) {
+      fail(`${propPath}.enum`, "must be a non-empty array when provided");
     }
   }
 }
 
-export async function loadJsonPlugin(source: string, projectRoot: string): Promise<McpPlugin> {
+export function validateJsonPluginDefinition(def: unknown): asserts def is JsonPluginDefinition {
+  if (!isPlainObject(def)) fail("$", "JSON plugin must be an object");
+  if (def.schemaVersion !== undefined && def.schemaVersion !== 1) fail("$.schemaVersion", "must be 1");
+  assertString(def.name, "$.name");
+  assertString(def.description, "$.description", false);
+  if (def.tools !== undefined && !Array.isArray(def.tools)) fail("$.tools", "must be an array");
+  if (def.resources !== undefined && !Array.isArray(def.resources)) fail("$.resources", "must be an array");
+  const tools = (def.tools ?? []) as unknown[];
+  const resources = (def.resources ?? []) as unknown[];
+  if (tools.length === 0 && resources.length === 0) {
+    fail("$", "must define at least one tool or resource");
+  }
+
+  for (const [index, tool] of tools.entries()) {
+    const path = `$.tools[${index}]`;
+    if (!isPlainObject(tool)) fail(path, "must be an object");
+    assertString(tool.name, `${path}.name`);
+    assertString(tool.title, `${path}.title`, false);
+    assertString(tool.description, `${path}.description`, false);
+    validateInputSchema(tool.inputSchema, `${path}.inputSchema`);
+    if (!isPlainObject(tool.response)) fail(`${path}.response`, "must be an object");
+    if (tool.response.type === "template") {
+      assertString(tool.response.text, `${path}.response.text`);
+    } else if (tool.response.type === "json") {
+      if (!("data" in tool.response)) fail(`${path}.response.data`, "is required for json responses");
+    } else {
+      fail(`${path}.response.type`, "must be template or json");
+    }
+  }
+
+  for (const [index, resource] of resources.entries()) {
+    const path = `$.resources[${index}]`;
+    if (!isPlainObject(resource)) fail(path, "must be an object");
+    assertString(resource.name, `${path}.name`);
+    assertString(resource.uri, `${path}.uri`);
+    assertString(resource.title, `${path}.title`, false);
+    assertString(resource.description, `${path}.description`, false);
+    assertString(resource.mimeType, `${path}.mimeType`, false);
+    if (!("text" in resource) && !("json" in resource)) fail(path, "must provide text or json content");
+    if ("text" in resource) assertString(resource.text, `${path}.text`);
+  }
+}
+
+export async function readJsonPluginDefinition(source: string, projectRoot: string): Promise<JsonPluginDefinition> {
   const absPath = isAbsolute(source) ? source : resolve(projectRoot, source);
-  const def = JSON.parse(await readFile(absPath, "utf-8")) as JsonPluginDefinition;
-  validateDefinition(def);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(absPath, "utf-8"));
+  } catch (err) {
+    throw new Error(`${source}: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  validateJsonPluginDefinition(parsed);
+  return parsed;
+}
+
+export async function loadJsonPlugin(source: string, projectRoot: string): Promise<McpPlugin> {
+  const def = await readJsonPluginDefinition(source, projectRoot);
 
   return {
     name: def.name,
